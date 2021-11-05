@@ -7,7 +7,7 @@ from fastcore.all import *
 
 
 class Message:
-    def __init__(self, recipient, message_type, message_content):
+    def __init__(self, recipient, message_type, message_content=None):
         self.sender = None
         self.recipient = recipient
         self.type = message_type
@@ -40,8 +40,8 @@ class Courier:
     def send(self, recipient: str, message_type, message_content):
         self.send(Message(recipient, message_type, message_content))
 
-    def receive(self: Message):
-        message = self.receiver_queue.get(timeout=self._RECEIVE_TIMEOUT)
+    def receive(self, timeout=_RECEIVE_TIMEOUT) -> Message:
+        message = self.receiver_queue.get(timeout=timeout)
         if message is None:
             return None
         self._logger.info(f"{self.process_name} received message from {message.sender}")

@@ -27,9 +27,15 @@ class App:
         self._mainframe = None
         self._body = None
 
+        self._customization = None
+
         self._shutdown_timer = QTimer()
         self._shutdown_timer.timeout.connect(self._shutdown_application)
         self._shutdown_timer.setInterval(1000)
+
+        self._message_timer = QTimer()
+        self._message_timer.timeout.connect(self._message_process)
+        self._message_timer.setInterval(100)
 
         self._initialise()
 
@@ -45,6 +51,12 @@ class App:
         if self._process_event.is_set():
             self._logger.info("Externally Shutting Down Application")
             self._application.quit()
+    
+    def _message_process(self):
+        message = self._courier.receive()
+        if message is not None:
+            if message.type == "Check Customization":
+                self._customization = message.content
 
     def _initialise(self):
         self._application = QApplication([])
@@ -62,6 +74,9 @@ class App:
         self._mainframe.layout().addWidget(self._build_header())
         self._mainframe.layout().addWidget(self._build_body())
         self._mainframe.layout().addWidget(self._build_footer())
+    
+    def _build_initialisation(self):
+        pass
     
     def _build_header(self):
         header = QFrame()

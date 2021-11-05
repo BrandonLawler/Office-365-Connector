@@ -1,1 +1,1 @@
-Disconnect-ExchangeOnline
+Disconnect-ExchangeOnline -Confirm:$false

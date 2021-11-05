@@ -1,6 +1,6 @@
 import multiprocessing, logging
 
-class CoreException(Exception):
+class PowerShellException(Exception):
     """
     Base class for all exceptions raised by the Core module.
     """
@@ -9,6 +9,6 @@ class CoreException(Exception):
         self._logger.setLevel(logging.DEBUG)
         self._logger.addHandler(logging.StreamHandler())
 
-        self._logger.error("Core Exception Occured")
+        self._logger.error("PowerShell Exception Occured")
         self._logger.error(message)
         shutdown_event.set()

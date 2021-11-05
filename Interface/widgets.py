@@ -1,6 +1,6 @@
 import os
 from PyQt6.QtWidgets import QPushButton, QLabel, QProgressBar, QMainWindow, QWidget
-from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QMovie
 from PyQt6.QtCore import *
 
 
@@ -52,6 +52,15 @@ class SwitchButton(Button):
 class Label(QLabel):
     def __init__(self, text, objname=None, stylestring=None):
         super().__init__(text)
+        if objname is not None:
+            self.setObjectName(objname)
+        if stylestring is not None:
+            self.setStyleSheet(stylestring)
+
+
+class Movie(QMovie):
+    def __init__(self, path, objname=None, stylestring=None):
+        super().__init__(path)
         if objname is not None:
             self.setObjectName(objname)
         if stylestring is not None:

@@ -10,6 +10,7 @@ import os, sys
 
 class App:
     _TITLE = 'Office 365 Connector'
+    _MEDIA_PATH = f"{os.getcwd()}\\Interface\\media"
 
     _WINDOW_HEIGHT = 600
     _WINDOW_WIDTH = 860
@@ -28,6 +29,7 @@ class App:
         self._body = None
 
         self._customization = None
+        self._mode = 0
 
         self._shutdown_timer = QTimer()
         self._shutdown_timer.timeout.connect(self._shutdown_application)
@@ -38,7 +40,7 @@ class App:
         self._message_timer.setInterval(100)
 
         self._initialise()
-
+        self._build()
         self.start()
     
     def _shutdown(self):
@@ -75,8 +77,19 @@ class App:
         self._mainframe.layout().addWidget(self._build_body())
         self._mainframe.layout().addWidget(self._build_footer())
     
+    def _build_loading_frame(self, message):
+        frame = QFrame()
+        frame.setLayout(QHBoxLayout())
+        gif = Movie(f"{self._MEDIA_PATH}\\loading_icon.gif")
+        frame.layout().addItem(gif)
+        frame.layout().addWidget(Label(message))
+        gif.start()
+        return frame
+    
     def _build_initialisation(self):
-        pass
+        self._body.hide()
+        self._body = self._build_loading_frame("Initialising")
+        self._body.show()
     
     def _build_header(self):
         header = QFrame()
@@ -90,7 +103,9 @@ class App:
         self._body = QFrame()
         self._body.setLayout(QVBoxLayout())
         
-
+        if self._mode == 0:
+            print("mode 0")
+            self._build_initialisation()
         
         return self._body
     

@@ -1,4 +1,4 @@
-from exceptions import *
+from .exceptions import *
 import subprocess
 import logging
 import os

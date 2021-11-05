@@ -1,8 +1,9 @@
 from Core.messages import Courier
-from exceptions import PowerShellException
-from powershell import PowerShell
+from .exceptions import PowerShellException
+from .powershell import PowerShell
 import multiprocessing
 import logging
+import os
 
 
 class O365:

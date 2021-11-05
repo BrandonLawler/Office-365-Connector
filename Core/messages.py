@@ -2,7 +2,7 @@ from multiprocessing import Queue
 import multiprocessing
 import logging
 from .exceptions import CoreException
-
+import time
 from fastcore.all import *
 
 
@@ -41,12 +41,16 @@ class Courier:
         self.send(Message(recipient, message_type, message_content))
 
     def receive(self, timeout=_RECEIVE_TIMEOUT) -> Message:
-        message = self.receiver_queue.get(timeout=timeout)
-        if message is None:
-            return None
-        self._logger.info(f"{self.process_name} received message from {message.sender}")
-        self._logger.debug(f"{self.process_name} received message: {message}")
-        return message
+        start = time.time()
+        while time.time() - start < timeout:
+            try:
+                message = self.receiver_queue.get(timeout=timeout)
+                self._logger.info(f"{self.process_name} received message from {message.sender}")
+                self._logger.debug(f"{self.process_name} received message: {message}")
+                return message
+            except queue.Empty:
+                pass
+        return None
 
 
 class Central:

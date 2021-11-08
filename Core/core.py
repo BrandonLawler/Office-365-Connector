@@ -87,4 +87,3 @@ class Core:
             if self.check_shutdowns() == 0:
                 break
         
-        

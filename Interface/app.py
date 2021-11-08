@@ -78,18 +78,17 @@ class App:
         self._mainframe.layout().addWidget(self._build_footer())
     
     def _build_loading_frame(self, message):
+        self._logger.debug("Building Loading Frame")
         frame = QFrame()
         frame.setLayout(QHBoxLayout())
-        gif = Movie(f"{self._MEDIA_PATH}\\loading_icon.gif")
-        frame.layout().addItem(gif)
-        frame.layout().addWidget(Label(message))
-        gif.start()
+        loading_gif = Movie(f"{self._MEDIA_PATH}\\loading_icon.gif")
+        frame.layout().addItem(Label(message).setMovie(loading_gif))
+        # frame.layout().addWidget(Label(message))
+        loading_gif.start()
         return frame
     
     def _build_initialisation(self):
-        self._body.hide()
         self._body = self._build_loading_frame("Initialising")
-        self._body.show()
     
     def _build_header(self):
         header = QFrame()
@@ -104,8 +103,7 @@ class App:
         self._body.setLayout(QVBoxLayout())
         
         if self._mode == 0:
-            print("mode 0")
-            self._build_initialisation()
+            self._body.layout().addWidget(self._build_initialisation())
         
         return self._body
     

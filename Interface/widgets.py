@@ -59,9 +59,11 @@ class Label(QLabel):
 
 
 class Movie(QMovie):
-    def __init__(self, path, objname=None, stylestring=None):
+    def __init__(self, path, scale=None, objname=None, stylestring=None):
         super().__init__(path)
         if objname is not None:
             self.setObjectName(objname)
         if stylestring is not None:
             self.setStyleSheet(stylestring)
+        if scale is not None:
+            self.setScaledSize(QSize(scale, scale))

@@ -30,6 +30,7 @@ class App:
 
         self._customization = None
         self._mode = 0
+        self._movie = None
 
         self._shutdown_timer = QTimer()
         self._shutdown_timer.timeout.connect(self._shutdown_application)
@@ -70,6 +71,30 @@ class App:
 
         self._mainframe = QFrame()
         self._window.setCentralWidget(self._mainframe)
+
+    def _build_variable_display(self, *args, horizontal=False, vertical=False, grid=False):
+        frame_container = Widget()
+        if horizontal:
+            frame = QHBoxLayout(frame_container)
+        elif vertical:
+            frame = QVBoxLayout(frame_container)
+            frame.setAlignment(Qt.AlignCenter)
+        elif grid:
+            frame = QGridLayout(frame_container)
+        else:
+            raise ValueError("Invalid Layout Type: Horizontal, Vertical or Grid input must be specified")
+        frame.setSpacing(0)
+        frame.setContentsMargins(10, 0, 10, 10)
+        for arg in args:
+            if grid:
+                try:
+                    widget, row, column, rsize, csize = arg
+                    frame.addWidget(widget, row, column, rsize, csize)
+                except:
+                    raise ValueError("Invalid Grid Layout: Must be (Widget, row, column, row_size, column_size)")
+            else:
+                frame.addWidget(arg)
+        return frame_container
     
     def _build(self):
         self._mainframe.setLayout(QVBoxLayout())
@@ -79,16 +104,17 @@ class App:
     
     def _build_loading_frame(self, message):
         self._logger.debug("Building Loading Frame")
-        frame = QFrame()
-        frame.setLayout(QHBoxLayout())
-        loading_gif = Movie(f"{self._MEDIA_PATH}\\loading_icon.gif")
-        frame.layout().addItem(Label(message).setMovie(loading_gif))
-        # frame.layout().addWidget(Label(message))
-        loading_gif.start()
-        return frame
+
+        self._movie = Movie(f"{self._MEDIA_PATH}\\loading_icon.gif", 120)
+        loading_movie = Label("")
+        loading_movie.setMovie(self._movie)
+
+        loading_label = Label(message)
+
+        return self._build_variable_display(loading_movie, loading_label, vertical=True, horizontal=False, grid=False)   
     
     def _build_initialisation(self):
-        self._body = self._build_loading_frame("Initialising")
+        return self._build_loading_frame("Initialising")
     
     def _build_header(self):
         header = QFrame()
@@ -117,5 +143,7 @@ class App:
     
     def start(self):
         self._window.show()
+        if self._movie is not None:
+            self._movie.start()
         self._shutdown_timer.start()
         sys.exit(self._application.exec())

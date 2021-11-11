@@ -4,12 +4,15 @@ from .powershell import PowerShell
 import multiprocessing
 import logging
 import os
+import time
 
 
 class O365:
+    _POWERSHELL_MODULE_INSTALLATION_TIMEOUT = 60
+
     def __init__(self, process_event: multiprocessing.Event, shutdown_event: multiprocessing.Event, courier: Courier):
         self._logger = multiprocessing.get_logger()
-        self._logger.setLevel(logging.DEBUG)
+        # self._logger.setLevel(logging.DEBUG)
         self._logger.addHandler(logging.StreamHandler())
 
         self._process_event = process_event
@@ -29,16 +32,42 @@ class O365:
             return False
         return True
     
+    def _check_microsoft_management_installed(self):
+        """
+        Check if Microsoft Management is installed
+        """
+        response = self._powershell.run_command('Get-InstalledModule -Name MSOnline')
+        if response is False:
+            return False
+        return True
+    
     def _install_exchange_management(self):
         """
         Install Exchange Management
         """
+        start = time.time()
         try:
             self._powershell.run_command('Install-Module -Name ExchangeOnlineManagement -force')
         except PowerShellException:
             pass
         while not self._check_exchange_management_installed():
-            pass      
+            if time.time() - start > self._POWERSHELL_MODULE_INSTALLATION_TIMEOUT:
+                self._logger.error("Exchange Management installation timed out")
+                raise PowerShellException("Exchange Management installation timed out")
+    
+    def _install_microsoft_management(self):
+        """
+        Install Microsoft Management
+        """
+        start_time = time.time()
+        try:
+            self._powershell.run_command('Install-Module -Name MSOnline -force')
+        except PowerShellException:
+            pass
+        while not self._check_microsoft_management_installed():
+            if time.time() - start_time > self._POWERSHELL_MODULE_INSTALLATION_TIMEOUT:
+                self._logger.error("Microsoft Management installation timed out")
+                raise PowerShellException("Microsoft Management installation timed out")
 
     def _connect_exchange_management(self, userPrincipleName):
         """
@@ -68,14 +97,20 @@ class O365:
         """
         if not self._check_exchange_management_installed():
             self._install_exchange_management()
+        self._courier.send("Interface", "Initialise", 1)
+        if not self._check_microsoft_management_installed():
+            self._install_microsoft_management()
+        self._courier.send("Interface", "Initialise", 2)
     
     def start(self):
         """
         Start the Thread
         """
+        self._logger.info("Starting O365 Process")
         while not self._process_event.is_set():
             message = self._courier.receive(timeout=-1)
             if message is not None:
+                self._logger.debug(f"Received message: {message}")
                 if message.type == "Initialise":
                     self.initialise_module()
                 elif message.type == "Connect":

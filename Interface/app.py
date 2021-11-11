@@ -14,10 +14,20 @@ class App:
 
     _WINDOW_HEIGHT = 600
     _WINDOW_WIDTH = 860
+    _LOADING_WINDOW_HEIGHT = 80
+    _LOADING_WINDOW_WIDTH = 60
+
+    _INITIALISATION_CHECKS = [
+        "Initialising Exchange Online",
+        "Initialising Microsoft 365 Online"
+    ]
+
+    _STAGE_INITIALISATION = 0
+    _STAGE_DISCONNECTED = 1
 
     def __init__(self, process_event: multiprocessing.Event, shutdown_event: multiprocessing.Event, courier: Courier):
         self._logger = multiprocessing.get_logger()
-        self._logger.setLevel(logging.DEBUG)
+        # self._logger.setLevel(logging.DEBUG)
         self._logger.addHandler(logging.StreamHandler())
         
         self._process_event = process_event
@@ -27,10 +37,14 @@ class App:
 
         self._mainframe = None
         self._body = None
+        self._body_frame = None
 
         self._customization = None
         self._mode = 0
+
         self._movie = None
+        self._loading_label = None
+        self._loading_bar = None
 
         self._shutdown_timer = QTimer()
         self._shutdown_timer.timeout.connect(self._shutdown_application)
@@ -42,6 +56,7 @@ class App:
 
         self._initialise()
         self._build()
+        self._courier.send("O365", "Initialise")
         self.start()
     
     def _shutdown(self):
@@ -58,7 +73,17 @@ class App:
     def _message_process(self):
         message = self._courier.receive()
         if message is not None:
-            if message.type == "Check Customization":
+            if message.type == "Initalise":
+                if type(message.content) is int:
+                    self._loading_bar.setValue(message.content)
+                    if message.content == self._INITIALISATION_CHECKS.__len__():
+                        self._mode = self._STAGE_DISCONNECTED
+                        self._window.resize(self._WINDOW_WIDTH, self._WINDOW_HEIGHT)
+                    else:
+                        self._loading_label.setText(self._INITIALISATION_CHECKS[message.content-1])
+                else:
+                    raise Exception("Unable to Initialise PowerShell Modules")
+            elif message.type == "Check Customization":
                 self._customization = message.content
 
     def _initialise(self):
@@ -78,7 +103,7 @@ class App:
             frame = QHBoxLayout(frame_container)
         elif vertical:
             frame = QVBoxLayout(frame_container)
-            frame.setAlignment(Qt.AlignCenter)
+            frame.setAlignment(Qt.AlignmentFlag.AlignCenter)
         elif grid:
             frame = QGridLayout(frame_container)
         else:
@@ -93,6 +118,8 @@ class App:
                 except:
                     raise ValueError("Invalid Grid Layout: Must be (Widget, row, column, row_size, column_size)")
             else:
+                if vertical:
+                    arg.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 frame.addWidget(arg)
         return frame_container
     
@@ -111,10 +138,13 @@ class App:
 
         loading_label = Label(message)
 
-        return self._build_variable_display(loading_movie, loading_label, vertical=True, horizontal=False, grid=False)   
+        self._loading_bar = ProgressBar(0, self._INITIALISATION_CHECKS.__len__())
+
+        return self._build_variable_display(loading_movie, loading_label, self._loading_bar, vertical=True, horizontal=False, grid=False)   
     
     def _build_initialisation(self):
-        return self._build_loading_frame("Initialising")
+        self._window.resize(self._LOADING_WINDOW_WIDTH, self._LOADING_WINDOW_HEIGHT)
+        return self._build_loading_frame("Initialising PowerShell Modules")
     
     def _build_header(self):
         header = QFrame()
@@ -127,9 +157,13 @@ class App:
     def _build_body(self):
         self._body = QFrame()
         self._body.setLayout(QVBoxLayout())
+
+        if self._body_frame is not None:
+            self._body_frame.hide()
         
-        if self._mode == 0:
-            self._body.layout().addWidget(self._build_initialisation())
+        if self._mode == self._STAGE_INITIALISATION:
+            self._body_frame = self._build_initialisation()
+        self._body.layout().addWidget(self._body_frame)
         
         return self._body
     

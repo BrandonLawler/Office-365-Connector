@@ -58,6 +58,27 @@ class Label(QLabel):
             self.setStyleSheet(stylestring)
 
 
+class ProgressBar(QProgressBar):
+    def __init__(self, min, max, vertical=False, showtext=False, objname=None, stylestring=None):
+        super().__init__()
+        self.setRange(min, max)
+        self.setValue(min)
+        if objname is not None:
+            self.setObjectName(objname)
+        if stylestring is not None:
+            self.setStyleSheet(stylestring)
+        if vertical:
+            self.setOrientation(Qt.Orientation.Vertical)
+        if not showtext:
+            self.setTextVisible(False)
+
+    def increase(self, obj=None):
+        self.setValue(self.value()+1)
+
+    def decrease(self, obj=None):
+        self.setValue(self.value()-1)
+
+
 class Movie(QMovie):
     def __init__(self, path, scale=None, objname=None, stylestring=None):
         super().__init__(path)

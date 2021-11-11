@@ -3,6 +3,7 @@ import multiprocessing
 import logging
 from .exceptions import CoreException
 import time
+import queue
 from fastcore.all import *
 
 
@@ -32,21 +33,25 @@ class Courier:
     @typedispatch
     def send(self, message: Message):
         message.sender = self.process_name
-        self._logger.info(f"{self.process_name} sending message to {message.recipient}")
-        self._logger.debug(f"{self.process_name} sending message: {message}")
+        if message.recipient != "Logger":
+            self.log(f"{self.process_name} sending message to {message.recipient}", logging.INFO)
+            self.log(f"{self.process_name} sending message: {message}", logging.DEBUG)
         self.send_queue.put(message)
 
     @typedispatch
-    def send(self, recipient: str, message_type, message_content):
+    def send(self, recipient: str, message_type, message_content=None):
         self.send(Message(recipient, message_type, message_content))
+    
+    def log(self, message, level=logging.INFO):
+        self.send(Message("Logger", message, level))
 
     def receive(self, timeout=_RECEIVE_TIMEOUT) -> Message:
         start = time.time()
         while time.time() - start < timeout:
             try:
                 message = self.receiver_queue.get(timeout=timeout)
-                self._logger.info(f"{self.process_name} received message from {message.sender}")
-                self._logger.debug(f"{self.process_name} received message: {message}")
+                self.log(f"{self.process_name} received message from {message.sender}", logging.INFO)
+                self.log(f"{self.process_name} received message: {message}", logging.DEBUG)
                 return message
             except queue.Empty:
                 pass
@@ -57,37 +62,36 @@ class Central:
     _MAX_QUEUE_SIZE = 10
     _RECEIVE_TIMEOUT = 1
 
-    def __init__(self, process_running, shutdown_event, core_queue):
+    def __init__(self, process_running, shutdown_event):
         self._logger = multiprocessing.get_logger()
         self._logger.setLevel(logging.DEBUG)
         self._logger.addHandler(logging.StreamHandler())
 
         self._process_running = process_running
         self._shutdown_event = shutdown_event
-        self._core_queue = core_queue
         self._send_queues = {}
         self._receive_queues = {}
     
-    def create_queue(self, queue_name):
+    def create_queue(self, queue_name) -> Courier:
         if queue_name not in self._receive_queues and queue_name not in self._send_queues:
             self._send_queues[queue_name] = Queue(maxsize=self._MAX_QUEUE_SIZE)
             self._receive_queues[queue_name] = Queue(maxsize=self._MAX_QUEUE_SIZE)
-            return Courier(queue_name, self._send_queues[queue_name], self._receive_queues[queue_name])
+            return Courier(queue_name, self._receive_queues[queue_name], self._send_queues[queue_name])
         raise CoreException("Queue already exists", self._shutdown_event)
     
     def start(self):
+        self._logger.info("Central Process Starting")
         while not self._process_running.is_set():
             for queue_name in self._receive_queues:
                 if not self._receive_queues[queue_name].empty():
                     message = self._receive_queues[queue_name].get(timeout=self._RECEIVE_TIMEOUT)
                     if message is not None:
-                        self._logger.info(f"Central received message from {message.sender}")
-                        self._logger.debug(f"Central received message: {message}")
-                        if message.recipient == "Core":
-                            self._core_queue.put(message)
-                        elif message.recipient in self._receive_queues:
+                        self._receive_queues["Logger"].put(Message("Logger", f"Central received message from {message.sender}", logging.INFO))
+                        self._receive_queues["Logger"].put(Message("Logger", f"Central received message: {message}", logging.DEBUG))
+                        if message.recipient in self._receive_queues:
                             self._receive_queues[message.recipient].put(message)
                         else:
-                            self._logger.warning(f"{message.recipient} not found in queues")
+                            self._receive_queues["Logger"].put(Message("Logger", f"{message.recipient} not found in queues", logging.ERROR))
+                            
         self._logger.debug("Central shutdown")
         self._shutdown_event.set()

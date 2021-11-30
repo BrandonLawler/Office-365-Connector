@@ -125,9 +125,10 @@ class O365:
 
 
 
-# if __name__ == '__main__':
-#     o = O365(None, None, None)
-#     o.initialise_module()
-#     o.connect_exchange_management("htiadmin@inselec.com.au")
-#     o._disconnect_exchange_management()
+if __name__ == '__main__':
+    o = O365(None, None, None)
+    o.initialise_module()
+    o.connect_exchange_management("htiadmin@inselec.com.au")
+    o.check_exchange_customization()
+    o._disconnect_exchange_management()
     
